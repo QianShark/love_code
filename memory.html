@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Our Anniversary - 彩虹糖版</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; font-family: 'PingFang SC', sans-serif; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        #ui {
+            position: absolute; bottom: 15%; left: 0; width: 100%;
+            z-index: 10; text-align: center; pointer-events: none;
+        }
+        
+        /* 彩虹糖文案样式 */
+        .sugar-text {
+            font-size: 1.4rem; font-weight: bold; letter-spacing: 2px;
+            background: linear-gradient(to right, #ff4d4d, #ffa502, #ffd32a, #2ecc71, #3498db, #9b59b6);
+            -webkit-background-clip: text; color: transparent;
+            opacity: 0; transform: translateY(20px);
+            transition: all 2s ease;
+            text-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+        
+        .active { opacity: 1; transform: translateY(0); }
+
+        #final { 
+            display: none; color: #fff; position: absolute; 
+            top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            z-index: 11; text-align: center; width: 100%;
+        }
+        .days { font-size: 5rem; font-weight: 900; margin: 10px 0; text-shadow: 0 0 30px rgba(255,255,255,0.5); }
+        .names { font-size: 2rem; margin-bottom: 5px; color: #ff7eb3; }
+    </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="ui">
+    <p id="story" class="sugar-text">每一天都像彩虹糖一样甜蜜哦</p>
+</div>
+
+<div id="final">
+    <h2 class="names">❤️ 某某 & 某某 ❤️</h2>
+    <div style="font-size: 1rem; opacity: 0.8;">我们已经在一起</div>
+    <div class="days" id="days-val">0</div>
+    <p>天，且共从容</p>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let particles = [], width, height;
+const particleCount = 2800; // 稍微增加一点数量，让实心感更强
+
+const config = [
+    { c: '#ff4d4d', t: '红色：炽热的爱心', type: 'heart' },
+    { c: '#ffa502', t: '橙色：酸甜的圆橙', type: 'orange' },
+    { c: '#ffd32a', t: '黄色：盛放的花朵', type: 'flower' },
+    { c: '#2ecc71', t: '绿色：新生的叶子', type: 'leaf' },
+    { c: '#1abc9c', t: '青色：静谧的青山', type: 'mountain' },
+    { c: '#3498db', t: '蓝色：宽广的大海', type: 'ocean' },
+    { c: '#9b59b6', t: '紫色：瑰丽的晚霞', type: 'sunset' }
+];
+
+function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+class Particle {
+    constructor() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.destX = this.x;
+        this.destY = this.y;
+        this.vx = 0; this.vy = 0;
+        this.color = '#fff';
+        this.size = Math.random() * 2 + 0.8;
+        this.phase = Math.random() * Math.PI * 2;
+        this.rotation = Math.random() * Math.PI;
+    }
+    update() {
+        this.vx = (this.destX - this.x) * 0.07;
+        this.vy = (this.destY - this.y) * 0.07;
+        this.x += this.vx;
+        this.y += this.vy;
+        this.phase += 0.05;
+        this.rotation += 0.02;
+    }
+    draw() {
+        const opacity = 0.4 + Math.abs(Math.sin(this.phase)) * 0.6;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = opacity;
+        // 绘制菱形粒子，旋转闪烁感更强
+        ctx.beginPath();
+        ctx.moveTo(-this.size, 0);
+        ctx.lineTo(0, -this.size * 1.5);
+        ctx.lineTo(this.size, 0);
+        ctx.lineTo(0, this.size * 1.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// 初始化粒子
+for(let i=0; i<particleCount; i++) particles.push(new Particle());
+
+function setShape(configItem) {
+    const cx = width / 2;
+    const cy = height * 0.45; // 居中偏上一点
+    const scale = Math.min(width, height) * 0.5;
+
+    particles.forEach((p, i) => {
+        let tx, ty;
+        const r = Math.random();
+
+        if (configItem.type === 'rainbow') {
+            const bandIndex = i % 7;
+            p.color = config[bandIndex].c;
+            const bandWidth = 14; 
+            const baseR = scale * 0.65; 
+            const innerR = baseR + (bandIndex * bandWidth);
+            const outerR = innerR + bandWidth;
+            const distR = Math.sqrt(Math.random() * (outerR * outerR - innerR * innerR) + innerR * innerR);
+            const angle = Math.random() * Math.PI * 1.1 - (Math.PI * 0.05);
+            tx = distR * Math.cos(Math.PI + angle);
+            ty = distR * Math.sin(Math.PI + angle) + (scale * 0.4); // 垂直修正，让圆弧居中
+        } else {
+            p.color = configItem.c;
+            switch(configItem.type) {
+                case 'heart':
+                    const hT = Math.random() * Math.PI * 2;
+                    const hR = Math.sqrt(r);
+                    tx = 16 * Math.pow(Math.sin(hT), 3);
+                    ty = -(13 * Math.cos(hT) - 5 * Math.cos(2*hT) - 2 * Math.cos(3*hT) - Math.cos(4*hT));
+                    tx *= (scale/35) * hR; ty *= (scale/35) * hR;
+                    break;
+                case 'orange':
+                    const oA = Math.random() * Math.PI * 2;
+                    const oR = (scale * 0.35) * Math.sqrt(r);
+                    tx = oR * Math.cos(oA); ty = oR * Math.sin(oA) * 0.9;
+                    break;
+                case 'flower': {
+                    const theta = Math.random() * Math.PI * 2;
+                    const k = 5; // 五瓣花
+
+                    // 1. 缩小基准尺寸 (从 0.45 降到 0.3)
+                    const baseR = scale * 0.3; 
+                    
+                    // 2. 修改公式：让花瓣收敛，不要太散
+                    // 通过 (0.5 + 0.5 * cos) 让它在中心有一定的空隙，看起来更灵动
+                    let r = baseR * (0.7 + 0.3 * Math.cos(k * theta));
+
+                    // 3. 层次与手绘感抖动
+                    const layerNoise = 0.9 + Math.random() * 0.2;
+                    r *= layerNoise;
+                    r += (Math.random() - 0.5) * 4;
+
+                    tx = r * Math.cos(theta);
+                    ty = r * Math.sin(theta) - scale * 0.05;
+
+                    // 4. ✨ 不同程度的黄色点缀 ✨
+                    const rand = Math.random();
+                    if (rand > 0.8) {
+                        p.color = '#ffffff'; // 亮白色点缀 (露珠感)
+                    } else if (rand > 0.4) {
+                        p.color = '#f1c40f'; // 标准金黄
+                    } else {
+                        p.color = '#ffdd59'; // 柔和柠檬黄
+                    }
+                    break;
+                }
+                case 'leaf': // 具象的、饱满的实心绿叶
+                    // 1. 角度范围：控制叶子的长宽比
+                    // t 从 -0.5 到 0.5 决定了叶子的弯曲程度
+                    const t = (Math.random() - 0.5) * 2; 
+                    
+                    // 2. 叶片宽度算法：中间最宽，向两端收缩
+                    // 使用 (1 - t^2) 这是一个经典的抛物线，保证了两头尖尖
+                    const leafWidth = (1 - t * t) * (scale * 0.25);
+                    
+                    // 3. 在宽度范围内随机分布，实现实心感
+                    const offsetX = (Math.random() - 0.5) * 2 * leafWidth;
+                    
+                    // 4. 坐标计算
+                    // tx：由基础位置 + 随机宽度组成
+                    // ty：由 t 决定长度，scale * 0.5 决定叶子长短
+                    tx = offsetX;
+                    ty = t * (scale * 0.45);
+                    
+                    // 5. 稍微给叶子加一点点弧度，让它看起来更自然，不是死板的直线
+                    tx += Math.sin(t * 2) * 20;
+                    
+                    p.color = '#2ecc71'; // 嫩绿色
+                    break;
+                case 'mountain':
+                    const mX = (Math.random() - 0.5) * scale;
+                    const lay = i % 3;
+                    const mH = [0.4, 0.25, 0.15][lay] * scale;
+                    const wav = Math.abs(Math.sin(mX * 0.01)) * 30;
+                    tx = mX; ty = (lay * 40) - (mH - Math.abs(mX * (0.2 + lay * 0.1))) + wav;
+                    break;
+                case 'ocean': // 蓝白交错的波浪线
+                    const oSpacing = 40; // 波浪间距
+                    const oRows = 6;     // 波浪层数
+                    const row = i % oRows; 
+                    const isWhite = row % 2 === 0; // 偶数层白色，奇数层蓝色
+                    
+                    p.color = isWhite ? '#ffffff' : '#3498db';
+                    
+                    // 水平铺满
+                    tx = (Math.random() - 0.5) * width * 1.2;
+                    // 每一层波浪有一个固定的基础高度，加上正弦起伏
+                    const baseY = (row - oRows/2) * oSpacing;
+                    const waveSin = Math.sin(tx * 0.008 + row) * 20; 
+                    
+                    ty = baseY + waveSin;
+                    break;
+
+                case 'sunset': // 【五圆堆叠】具象云：主圆 + 两个中圆 + 两个小圆
+                // 将粒子平均分配给 5 个圆
+                const blobID = i % 5;
+                let bRad, bOffX, bOffY;
+
+                // 核心参数：定义五圆的大小和间距
+                const mainR = scale * 0.25;   // 1. 中心主圆
+                const midR  = scale * 0.18;   // 2. 左右中圆
+                const sideR = scale * 0.12;   // 3. 最外侧小圆
+                
+                const midShift = scale * 0.18;  // 中圆偏移
+                const sideShift = scale * 0.32; // 小圆偏移
+
+                if (blobID === 0) { 
+                    // 1. 中心大圆 (稍微靠上)
+                    bRad = mainR; bOffX = 0; bOffY = -scale * 0.05;
+                } else if (blobID === 1) { 
+                    // 2. 左中圆
+                    bRad = midR; bOffX = -midShift; bOffY = scale * 0.05;
+                } else if (blobID === 2) { 
+                    // 3. 右中圆
+                    bRad = midR; bOffX = midShift; bOffY = scale * 0.05;
+                } else if (blobID === 3) { 
+                    // 4. 左外小圆 (最边上，位置更低)
+                    bRad = sideR; bOffX = -sideShift; bOffY = scale * 0.1;
+                } else { 
+                    // 5. 右外小圆 (最边上，位置更低)
+                    bRad = sideR; bOffX = sideShift; bOffY = scale * 0.1;
+                }
+
+                // 实心填充：在选定的圆内随机取点
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.sqrt(Math.random()) * bRad; 
+                
+                tx = bOffX + dist * Math.cos(angle);
+                ty = bOffY + dist * Math.sin(angle);
+                
+                p.color = '#9b59b6'; // 浪漫晚霞紫
+                break;
+            }
+        }
+        p.destX = cx + tx;
+        p.destY = cy + ty;
+    });
+}
+
+let step = -1;
+function next() {
+    step++;
+    const storyEl = document.getElementById('story');
+    
+    if(step < config.length) {
+        // 1. 切换粒子形状和颜色
+        setShape(config[step]);
+        
+        // 2. 文字先消失，再带着新颜色出现
+        storyEl.classList.remove('active');
+        
+        setTimeout(() => {
+            storyEl.innerText = config[step].t;
+            // 关键：将文字颜色设置为当前粒子的颜色
+            storyEl.style.color = config[step].c; 
+            // 移除渐变背景，确保单色显示清晰
+            storyEl.style.background = 'none';
+            storyEl.style.webkitBackgroundClip = 'initial';
+            
+            storyEl.classList.add('active');
+        }, 1000);
+        
+        setTimeout(next, 5000);
+    } else {
+        // 3. 最终时刻：回到彩虹糖渐变色
+        storyEl.classList.remove('active');
+        setTimeout(() => {
+            storyEl.innerText = "每一天都像彩虹糖一样甜蜜哦";
+            // 恢复 CSS 中定义的渐变效果
+            storyEl.style.color = 'transparent';
+            storyEl.style.background = 'linear-gradient(to right, #ff4d4d, #ffa502, #ffd32a, #2ecc71, #3498db, #9b59b6)';
+            storyEl.style.webkitBackgroundClip = 'text';
+            
+            storyEl.classList.add('active');
+            showFinal();
+        }, 1000);
+    }
+}
+
+function showFinal() {
+    const finalEl = document.getElementById('final');
+    finalEl.style.display = 'block';
+    const start = new Date('2023-01-01'); // ❤️ 记得在这里改日期 ❤️
+    const today = new Date();
+    document.getElementById('days-val').innerText = Math.floor((today - start) / 86400000);
+}
+
+function loop() {
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(0,0,width,height);
+    particles.forEach(p => { p.update(); p.draw(); });
+    requestAnimationFrame(loop);
+}
+
+// 初始化
+resize();
+loop();
+// 开场：先展示居中的绚丽彩虹
+setShape({type: 'rainbow'});
+setTimeout(next, 3500);
+
+</script>
+</body>
+</html>
